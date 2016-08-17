@@ -293,6 +293,10 @@ public:
                                PathCondition *pathCondition,
                                ref<Expr> condition);
 
+  static void replacePathCondition(ITreeNode *iTreeNode,
+                                   PathCondition *pathCondition,
+                                   ref<Expr> condition);
+
   static void addTableEntryMapping(ITreeNode *iTreeNode,
                                    SubsumptionTableEntry *entry);
 
@@ -561,8 +565,10 @@ private:
 
     // Disabling the subsumption check within KLEE's own API
     // (callsites of klee_ and at any location within the klee_ function)
-    // by never store a table entry for KLEE's own API, marked with flag storable.
-    storable = !(instr->getParent()->getParent()->getName().substr(0, 5).equals("klee_"));
+    // by never store a table entry for KLEE's own API, marked with flag
+    // storable.
+    storable = !(instr->getParent()->getParent()->getName().substr(0, 5).equals(
+                    "klee_"));
   }
 
   /// \brief for printing method running time statistics
@@ -585,6 +591,15 @@ public:
   /// \param The constraint to extend the current path condition with
   /// \param The LLVM value that corresponds to the constraint
   void addConstraint(ref<Expr> &constraint, llvm::Value *value);
+
+  /// \brief For abstracting constraints
+  ///
+  /// \param The constraint of the klee_abstract condition
+  /// \param The LLVM value that is the condition of klee_abstract
+  /// \param The constraints that are to be kept as their variables do not
+  /// intersect with the klee_abstract condition
+  void abstractConstraints(ref<Expr> &constraint, llvm::Value *condition,
+                           std::vector<ref<Expr> > keptConstraints);
 
   /// \brief Creates fresh interpolation data holder for the two given KLEE
   /// execution states.

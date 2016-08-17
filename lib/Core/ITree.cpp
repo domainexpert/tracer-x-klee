@@ -558,7 +558,6 @@ std::string SearchTree::recurseRender(const SearchTree::Node *node) {
 
   stream << "Node" << node->nodeId;
   std::string sourceNodeName = stream.str();
-
   stream << " [shape=record,label=\"{" << node->nodeId << ": " << node->name
          << "\\l";
   for (std::map<PathCondition *, std::pair<std::string, bool> >::const_iterator
@@ -611,6 +610,7 @@ std::string SearchTree::render() {
     return res;
 
   std::ostringstream stream;
+
   for (std::vector<SearchTree::NumberedEdge *>::iterator
            it = subsumptionEdges.begin(),
            itEnd = subsumptionEdges.end();
@@ -713,6 +713,26 @@ void SearchTree::addPathCondition(ITreeNode *iTreeNode,
   instance->pathConditionMap[pathCondition] = node;
 }
 
+void SearchTree::replacePathCondition(ITreeNode *iTreeNode,
+                                      PathCondition *pathCondition,
+                                      ref<Expr> condition) {
+
+  if (!OUTPUT_INTERPOLATION_TREE)
+    return;
+
+  assert(SearchTree::instance && "Search tree graph not initialized");
+
+  SearchTree::Node *node = instance->itreeNodeMap[iTreeNode];
+
+  std::string s = PrettyExpressionBuilder::construct(condition);
+
+  std::pair<std::string, bool> p(s, false);
+
+  node->pathConditionTable.clear();
+  node->pathConditionTable[pathCondition] = p;
+  instance->pathConditionMap[pathCondition] = node;
+}
+
 void SearchTree::addTableEntryMapping(ITreeNode *iTreeNode,
                                       SubsumptionTableEntry *entry) {
   if (!OUTPUT_INTERPOLATION_TREE)
@@ -729,6 +749,9 @@ void SearchTree::setAsCore(PathCondition *pathCondition) {
     return;
 
   assert(SearchTree::instance && "Search tree graph not initialized");
+
+  assert(instance->pathConditionMap[pathCondition] &&
+         "pathCondition has no corresponding tree node");
 
   instance->pathConditionMap[pathCondition]
       ->pathConditionTable[pathCondition]
@@ -773,13 +796,15 @@ void SearchTree::save(std::string dotFileName) {
 
 /**/
 
-PathCondition::PathCondition(ref<Expr> &constraint, Dependency *dependency,
-                             llvm::Value *condition, PathCondition *prev)
-    : constraint(constraint), shadowConstraint(constraint), shadowed(false),
-      dependency(dependency),
-      condition(dependency ? dependency->getLatestValue(condition, constraint)
-                           : 0),
-      core(false), tail(prev) {}
+PathCondition::PathCondition(ref<Expr> &_constraint, Dependency *_dependency,
+                             llvm::Value *_condition, PathCondition *prev)
+    : constraint(_constraint), shadowConstraint(_constraint), shadowed(false),
+      dependency(_dependency), core(false), tail(prev) {
+  condition = 0;
+  if (_condition && _dependency) {
+    condition = _dependency->getLatestValue(_condition, constraint);
+  }
+}
 
 PathCondition::~PathCondition() {}
 
@@ -812,7 +837,7 @@ PathCondition::packInterpolant(std::set<const Array *> &replacements) {
                            : ShadowArray::getShadowExpression(it->constraint,
                                                               replacements));
 #else
-	it->shadowConstraint = it->constraint;
+        it->shadowConstraint = it->constraint;
 #endif
         it->shadowed = true;
         it->boundVariables.insert(replacements.begin(), replacements.end());
@@ -2139,6 +2164,21 @@ void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   ITreeNode::addConstraintTimer.stop();
 }
 
+void ITreeNode::abstractConstraints(ref<Expr> &constraint,
+                                    llvm::Value *condition,
+                                    std::vector<ref<Expr> > keptConstraints) {
+  PathCondition *prev = NULL;
+  PathCondition *current = NULL;
+  for (std::vector<ref<Expr> >::iterator it = keptConstraints.begin();
+       it != keptConstraints.end(); ++it) {
+    current = new PathCondition(*it, dependency, 0, prev);
+    graph->replacePathCondition(this, current, *it);
+    prev = current;
+  }
+  pathCondition = new PathCondition(constraint, dependency, condition, prev);
+  graph->replacePathCondition(this, pathCondition, constraint);
+}
+
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
   ITreeNode::splitTimer.start();
   assert(left == 0 && right == 0);
@@ -2215,7 +2255,6 @@ void ITreeNode::unsatCoreMarking(std::vector<ref<Expr> > unsatCore) {
     }
     markerMap[it->car().get()] = it;
   }
-
   AllocationGraph *g = new AllocationGraph();
   for (std::vector<ref<Expr> >::iterator it1 = unsatCore.begin(),
                                          it1End = unsatCore.end();

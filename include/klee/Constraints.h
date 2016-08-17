@@ -44,7 +44,22 @@ public:
   ref<Expr> simplifyExpr(ref<Expr> e) const;
 
   void addConstraint(ref<Expr> e);
-  
+
+  /// Replace the state constraint that has variable intersection with the
+  /// condition in klee_abstract() and collect constraints that are kept (not
+  /// removed/replaced) which later use for construction of a new PathCondition.
+  ///
+  /// \param e Condition in klee_abstract()
+  /// \param keptConstraints Constraints that are kept (not removed/replaced)
+  void abstractConstraints(ref<Expr> e,
+                           std::vector<ref<Expr> > &keptConstraints);
+
+  static void getArrayFromExpr(ref<Expr> expr,
+                               std::set<const Array *> &arrayPack);
+
+  static bool variablesIntersect(std::set<const Array *> &v1,
+                                 std::set<const Array *> &v2);
+
   bool empty() const {
     return constraints.empty();
   }

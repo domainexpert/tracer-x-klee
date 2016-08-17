@@ -82,6 +82,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("calloc", handleCalloc, true),
   add("free", handleFree, false),
   add("klee_assume", handleAssume, false),
+  add("klee_abstract", handleAbstract, false),
   add("klee_check_memory_access", handleCheckMemoryAccess, false),
   add("klee_get_valuef", handleGetValue, true),
   add("klee_get_valued", handleGetValue, true),
@@ -405,6 +406,37 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
     }
   } else {
     executor.addConstraint(state, e);
+  }
+}
+
+void
+SpecialFunctionHandler::handleAbstract(ExecutionState &state,
+                                       KInstruction *target,
+                                       std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 &&
+         "invalid number of arguments to klee_abstract");
+  ref<Expr> e = arguments[0];
+  Solver::Validity result;
+
+  if (e->getWidth() != Expr::Bool)
+    e = NeExpr::create(e, ConstantExpr::create(0, e->getWidth()));
+
+  // Check the given (boolean) condition implies current state constraint.
+  executor.solver->setTimeout(executor.coreSolverTimeout);
+  bool success = executor.solver->evaluate(state, e, result);
+  executor.solver->setTimeout(0);
+  if (success && result == Solver::True) {
+    std::vector<ref<Expr> > unsatCore = executor.solver->getUnsatCore();
+    state.itreeNode->unsatCoreMarking(unsatCore);
+  }
+  assert(success && "FIXME: Unhandled solver failure");
+
+  if (result == Solver::True) {
+    executor.abstractConstraints(state, e);
+  } else if (result == Solver::Unknown) {
+    executor.addConstraint(state, e);
+  } else {
+    executor.terminateStateOnError(state, "abstraction error", "user.err");
   }
 }
 

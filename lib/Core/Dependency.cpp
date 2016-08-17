@@ -140,7 +140,8 @@ ShadowArray::getShadowExpression(ref<Expr> expr,
     break;
   }
   case Expr::NotOptimized: {
-    ret = NotOptimizedExpr::create(getShadowExpression(expr->getKid(0), replacements));
+    ret = NotOptimizedExpr::create(
+        getShadowExpression(expr->getKid(0), replacements));
     break;
   }
   default:
@@ -459,11 +460,11 @@ Dependency::getStoredExpressions(std::set<const Array *> &replacements,
           uint64_t uintAddress = (*allocIter)->getUIntAddress();
           ref<Expr> address = (*allocIter)->getAddress();
 #ifdef SUPPORT_Z3
-	  if (!NoExistential) {
+          if (!NoExistential) {
             concreteStore[base][uintAddress] = AddressValuePair(
                 ShadowArray::getShadowExpression(address, replacements),
                 ShadowArray::getShadowExpression(expr, replacements));
-	  } else
+          } else
 #endif
             concreteStore[base][uintAddress] = AddressValuePair(address, expr);
         }
@@ -855,11 +856,12 @@ void Dependency::execute(llvm::Instruction *instr,
     llvm::Function *f = callInst->getCalledFunction();
 
     if (!f) {
-	// Handles the case when the callee is wrapped within another expression
-	llvm::ConstantExpr *calledValue = llvm::dyn_cast<llvm::ConstantExpr>(callInst->getCalledValue());
-	if (calledValue && calledValue->getOperand(0)) {
-	    f = llvm::dyn_cast<llvm::Function>(calledValue->getOperand(0));
-	}
+      // Handles the case when the callee is wrapped within another expression
+      llvm::ConstantExpr *calledValue =
+          llvm::dyn_cast<llvm::ConstantExpr>(callInst->getCalledValue());
+      if (calledValue && calledValue->getOperand(0)) {
+        f = llvm::dyn_cast<llvm::Function>(calledValue->getOperand(0));
+      }
     }
 
     if (f && f->getIntrinsicID() == llvm::Intrinsic::not_intrinsic) {

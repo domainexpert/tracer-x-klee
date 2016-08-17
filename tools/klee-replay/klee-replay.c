@@ -410,6 +410,13 @@ unsigned klee_assume(uintptr_t x) {
   return 0;
 }
 
+unsigned klee_abstract(uintptr_t x) {
+  if (!x) {
+    fprintf(stderr, "WARNING: klee_abstract(0)!\n");
+  }
+  return 0;
+}
+
 unsigned klee_is_symbolic(uintptr_t x) {
   return 0;
 }
