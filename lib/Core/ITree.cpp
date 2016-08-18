@@ -796,8 +796,15 @@ void SearchTree::save(std::string dotFileName) {
 
 /**/
 
-PathCondition::PathCondition(ref<Expr> &_constraint, Dependency *_dependency,
-                             llvm::Value *_condition, PathCondition *prev)
+PathCondition::PathCondition(const ref<Expr> &newConstraint, PathCondition *src,
+                             PathCondition *prev)
+    : constraint(newConstraint), shadowConstraint(newConstraint),
+      shadowed(src->shadowed), dependency(src->dependency),
+      condition(src->condition), core(src->core), tail(prev) {}
+
+PathCondition::PathCondition(const ref<Expr> &_constraint,
+                             Dependency *_dependency, llvm::Value *_condition,
+                             PathCondition *prev)
     : constraint(_constraint), shadowConstraint(_constraint), shadowed(false),
       dependency(_dependency), core(false), tail(prev) {
   condition = 0;
@@ -2164,19 +2171,74 @@ void ITreeNode::addConstraint(ref<Expr> &constraint, llvm::Value *condition) {
   ITreeNode::addConstraintTimer.stop();
 }
 
-void ITreeNode::abstractConstraints(ref<Expr> &constraint,
-                                    llvm::Value *condition,
-                                    std::vector<ref<Expr> > keptConstraints) {
-  PathCondition *prev = NULL;
-  PathCondition *current = NULL;
-  for (std::vector<ref<Expr> >::iterator it = keptConstraints.begin();
-       it != keptConstraints.end(); ++it) {
-    current = new PathCondition(*it, dependency, 0, prev);
-    graph->replacePathCondition(this, current, *it);
-    prev = current;
+bool ITreeNode::variablesIntersect(std::set<const Array *> &v1,
+                                   std::set<const Array *> &v2) {
+  std::set<const Array *> v3;
+  set_intersection(v1.begin(), v1.end(), v2.begin(), v2.end(),
+                   std::inserter(v3, v3.begin()));
+  return !v3.empty();
+}
+
+void ITreeNode::getArrayFromExpr(ref<Expr> expr,
+                                 std::set<const Array *> &arrayPack) {
+  if (llvm::isa<ReadExpr>(expr))
+    arrayPack.insert((llvm::dyn_cast<ReadExpr>(expr)->updates).root);
+
+  for (unsigned int i = 0; i < expr->getNumKids(); ++i) {
+    getArrayFromExpr(expr->getKid(i), arrayPack);
   }
-  pathCondition = new PathCondition(constraint, dependency, condition, prev);
+}
+
+ConstraintManager ITreeNode::abstractConstraints(ExecutionState &state,
+                                                 ref<Expr> &constraint,
+                                                 llvm::Value *condition) {
+  std::set<const Array *> condArrayPack;
+  getArrayFromExpr(constraint, condArrayPack);
+
+  std::set<const Array *> itArrayPack;
+  ConstraintManager keptConstraints;
+
+  std::vector<ref<Expr> > constraintsList(state.constraints.getConstraints());
+
+  PathCondition *pc = pathCondition, *newPc = 0;
+
+  std::vector<ref<Expr> >::const_reverse_iterator it = constraintsList.rbegin(),
+                                                  ie = constraintsList.rend();
+
+  while (it != ie) {
+    getArrayFromExpr(*it, itArrayPack);
+    if (!variablesIntersect(itArrayPack, condArrayPack)) {
+      while (pc && pc->car() != (*it)) {
+        pc = pc->cdr();
+      }
+      assert(pc && "constraint not found on path condition");
+      newPc = new PathCondition(*it, pc, newPc);
+      keptConstraints.addConstraint(*it);
+    }
+    ++it;
+    itArrayPack.clear();
+  }
+
+  // Destroy the old path condition
+  PathCondition *pcIt = pathCondition;
+  while (pcIt) {
+    PathCondition *next = pcIt->cdr();
+    delete pcIt;
+    pcIt = next;
+  }
+
+  // Replace the path condition in the output tree
+  pcIt = newPc;
+  while (pcIt) {
+    graph->replacePathCondition(this, pcIt, pcIt->car());
+    pcIt = pcIt->cdr();
+  }
+
+  // Set the new path condition
+  pathCondition = new PathCondition(constraint, dependency, condition, newPc);
   graph->replacePathCondition(this, pathCondition, constraint);
+
+  return keptConstraints;
 }
 
 void ITreeNode::split(ExecutionState *leftData, ExecutionState *rightData) {
