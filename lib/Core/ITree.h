@@ -322,7 +322,10 @@ class PathCondition {
   PathCondition *tail;
 
 public:
-  PathCondition(ref<Expr> &constraint, Dependency *dependency,
+  PathCondition(const ref<Expr> &newConstraint, PathCondition *src,
+                PathCondition *prev);
+
+  PathCondition(const ref<Expr> &constraint, Dependency *dependency,
                 llvm::Value *condition, PathCondition *prev);
 
   ~PathCondition();
@@ -572,12 +575,13 @@ public:
 
   /// \brief For abstracting constraints
   ///
+  /// \param The current execution state
   /// \param The constraint of the klee_abstract condition
   /// \param The LLVM value that is the condition of klee_abstract
-  /// \param The constraints that are to be kept as their variables do not
-  /// intersect with the klee_abstract condition
-  void abstractConstraints(ref<Expr> &constraint, llvm::Value *condition,
-                           std::vector<ref<Expr> > keptConstraints);
+  /// \return The list of constraints that should be retained
+  ConstraintManager abstractConstraints(ExecutionState &state,
+                                        ref<Expr> &constraint,
+                                        llvm::Value *condition);
 
   /// \brief Creates fresh interpolation data holder for the two given KLEE
   /// execution states.
@@ -603,6 +607,11 @@ public:
   /// indexed by symbolic expressions.
   std::pair<Dependency::ConcreteStore, Dependency::SymbolicStore>
   getStoredExpressions() const;
+
+  /// \brief This returns the path condition linked list
+  ///
+  /// \return The path condition linked list
+  PathCondition *getPathCondition() const { return pathCondition; }
 
   /// \brief This retrieves the allocations known at this state, and the
   /// expressions stored in the allocations, as long as the allocation is
@@ -638,6 +647,12 @@ private:
   ~ITreeNode();
 
   void print(llvm::raw_ostream &stream, const unsigned tabNum) const;
+
+  static bool variablesIntersect(std::set<const Array *> &v1,
+                                 std::set<const Array *> &v2);
+
+  static void getArrayFromExpr(ref<Expr> expr,
+                               std::set<const Array *> &arrayPack);
 };
 
 /// \brief The top-level structure that implements the interpolation
