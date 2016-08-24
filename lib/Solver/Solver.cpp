@@ -1520,7 +1520,9 @@ bool CLPRSolverImpl::validateRecursivePredicate(
   for (ConstraintManager::const_iterator it = constraints.begin(),
                                          itEnd = constraints.end();
        it != itEnd; ++it) {
+    (*it)->dump();
     clpr::CLPTerm clprConstraint = builder->construct(*it);
+    llvm::errs() << "CLP(R) constraint: " << clprConstraint.str() << "\n";
     query.addTerm(clprConstraint);
   }
 
@@ -1542,6 +1544,7 @@ bool CLPRSolverImpl::validateRecursivePredicate(
   consequent.addArgument(queryAtom);
   query.addTerm(consequent);
 
+  llvm::errs() << "Query: " << query.str() << "\n";
   engine->query(query);
   if (!engine->hasSolution()) {
     return true;

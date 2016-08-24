@@ -579,16 +579,37 @@ clpr::CLPTerm CLPRBuilder::constructActual(ref<Expr> e, int *width_out) {
   }
 
   case Expr::Concat: {
+    // First we get the read expression
     Expr *ex = e.get();
+    unsigned concatCount = 0;
     while (llvm::isa<ConcatExpr>(ex)) {
       ConcatExpr *ce = llvm::cast<ConcatExpr>(ex);
       ex = ce->getKid((ce->numKids) - 1).get();
+      ++concatCount;
     }
     assert(llvm::isa<ReadExpr>(ex) && "wrong type");
     ReadExpr *re = llvm::cast<ReadExpr>(ex);
 
-    clpr::CLPTerm res("__clp__" + re->updates.root->name);
-    return res;
+    clpr::CLPTerm readIndex = construct(re->index, 0);
+    clpr::CLPTerm array = getArrayForUpdate(re->updates.root, re->updates.head);
+    clpr::CLPTerm readTerm = readExpr(array, readIndex);
+
+    for (unsigned i = 0; i < concatCount; ++i) {
+      readIndex = clpr::CLPTerm("+");
+      readIndex.addArgument(readIndex);
+      readIndex.addArgument(clpr::CLPTerm("4"));
+
+      clpr::CLPTerm shiftedCurrentValue("*");
+      shiftedCurrentValue.addArgument(readTerm);
+      shiftedCurrentValue.addArgument(clpr::CLPTerm("256"));
+
+      readTerm = clpr::CLPTerm("+");
+      readTerm.addArgument(readExpr(array, readIndex));
+      readTerm.addArgument(shiftedCurrentValue);
+    }
+
+    *width_out = ex->getWidth();
+    return readTerm;
   }
 
   case Expr::Extract: {
