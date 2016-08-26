@@ -1532,11 +1532,11 @@ bool CLPRSolverImpl::validateRecursivePredicate(
     query.addTerm(*it);
   }
 
-  for (std::vector<clpr::CLPTerm>::iterator
+  for (std::vector<clpr::CLPTerm *>::iterator
            it = builder->auxiliaryConstraintsBegin(),
            itEnd = builder->auxiliaryConstraintsEnd();
        it != itEnd; ++it) {
-    query.addTerm(*it);
+    query.addTerm(*(*it));
   }
 
   // Remember order is important in SLDNF, the consequent has to be last.

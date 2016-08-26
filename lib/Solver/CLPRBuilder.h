@@ -44,7 +44,7 @@ class CLPRBuilder {
 
   CLPRArrayExprHash _arr_hash;
 
-  std::vector<clpr::CLPTerm> auxiliaryConstraints;
+  std::vector<clpr::CLPTerm *> auxiliaryConstraints;
 
   std::map<const Array *, uint64_t> arrayAddressRegistry;
 
@@ -141,18 +141,24 @@ public:
   ///
   /// \param The address registry.
   void init(std::map<const Array *, uint64_t> &_arrayAddressRegistry) {
+    for (std::vector<clpr::CLPTerm *>::iterator
+             it = auxiliaryConstraints.begin(),
+             ie = auxiliaryConstraints.end();
+         it != ie; ++it) {
+      delete (*it);
+    }
     auxiliaryConstraints.clear();
     arrayAddressRegistry.clear();
     arrayAddressRegistry = _arrayAddressRegistry;
   }
 
   /// \brief Gets the beginning iterator of the auxiliary constraints
-  std::vector<clpr::CLPTerm>::iterator auxiliaryConstraintsBegin() {
+  std::vector<clpr::CLPTerm *>::iterator auxiliaryConstraintsBegin() {
     return auxiliaryConstraints.begin();
   }
 
   /// \brief Gets the end iterator of the auxiliary constraints
-  std::vector<clpr::CLPTerm>::iterator auxiliaryConstraintsEnd() {
+  std::vector<clpr::CLPTerm *>::iterator auxiliaryConstraintsEnd() {
     return auxiliaryConstraints.end();
   }
 };

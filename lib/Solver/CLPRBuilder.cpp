@@ -53,7 +53,15 @@ CLPRBuilder::CLPRBuilder() {
   tempVars[3] = buildVar("__tmpInt64", 64);
 }
 
-CLPRBuilder::~CLPRBuilder() {}
+CLPRBuilder::~CLPRBuilder() {
+  for (std::vector<clpr::CLPTerm *>::iterator it = auxiliaryConstraints.begin(),
+                                              ie = auxiliaryConstraints.end();
+       it != ie; ++it) {
+    delete (*it);
+  }
+  auxiliaryConstraints.clear();
+  arrayAddressRegistry.clear();
+}
 
 ///
 
@@ -295,15 +303,15 @@ clpr::CLPTerm CLPRBuilder::bvSignExtend(clpr::CLPTerm src, unsigned width) {
 }
 
 clpr::CLPTerm CLPRBuilder::writeExpr(clpr::CLPTerm array, clpr::CLPTerm index, clpr::CLPTerm value) {
-  clpr::CLPTerm upd("mcc_update");
-  upd.addArgument(array);
-  upd.addArgument(index);
+  clpr::CLPTerm *upd = new clpr::CLPTerm("mcc_update");
+  upd->addArgument(array);
+  upd->addArgument(index);
 
   std::ostringstream tmpVarNameStream;
   tmpVarNameStream << "_t" << (&upd);
 
   clpr::CLPTerm tmpVar(tmpVarNameStream.str());
-  upd.addArgument(tmpVar);
+  upd->addArgument(tmpVar);
 
   auxiliaryConstraints.push_back(upd);
   return tmpVar;
@@ -314,15 +322,15 @@ clpr::CLPTerm CLPRBuilder::readExpr(clpr::CLPTerm array, clpr::CLPTerm index) {
   address.addArgument(array);
   address.addArgument(index);
 
-  clpr::CLPTerm select("mcc_select");
-  select.addArgument(globalHeap);
-  select.addArgument(address);
+  clpr::CLPTerm *select = new clpr::CLPTerm("mcc_select");
+  select->addArgument(globalHeap);
+  select->addArgument(address);
 
   std::ostringstream tmpVarNameStream;
-  tmpVarNameStream << "_t" << (&select);
+  tmpVarNameStream << "_t" << select;
 
   clpr::CLPTerm tmpVar(tmpVarNameStream.str());
-  select.addArgument(tmpVar);
+  select->addArgument(tmpVar);
 
   auxiliaryConstraints.push_back(select);
   return tmpVar;
@@ -595,9 +603,10 @@ clpr::CLPTerm CLPRBuilder::constructActual(ref<Expr> e, int *width_out) {
     clpr::CLPTerm readTerm = readExpr(array, readIndex);
 
     for (unsigned i = 0; i < concatCount; ++i) {
-      readIndex = clpr::CLPTerm("+");
-      readIndex.addArgument(readIndex);
-      readIndex.addArgument(clpr::CLPTerm("4"));
+      clpr::CLPTerm readIndex1("+");
+      readIndex1.addArgument(readIndex);
+      readIndex1.addArgument(clpr::CLPTerm("1"));
+      readIndex = readIndex1;
 
       clpr::CLPTerm shiftedCurrentValue("*");
       shiftedCurrentValue.addArgument(readTerm);
