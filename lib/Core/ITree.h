@@ -708,7 +708,7 @@ class ITree {
 
   ITreeNode *currentINode;
 
-  std::map<uintptr_t, std::vector<SubsumptionTableEntry *> > subsumptionTable;
+  std::map<uintptr_t, std::deque<SubsumptionTableEntry *> > subsumptionTable;
 
 #ifdef SUPPORT_CLPR
   /// \brief A record of successful klee_join callsites, where the CLP predicate
