@@ -879,6 +879,10 @@ public:
   static void executeOnNode(TxTreeNode *node, llvm::Instruction *instr,
                             std::vector<ref<Expr> > &args);
 
+  /// \brief Dump KLEE's memory as expression, for submitting into constraint
+  /// solver, etc.
+  static ref<Expr> dumpMemoryConstraint(ExecutionState &state);
+
   /// \brief Print the content of the tree node object into a stream.
   ///
   /// \param stream The stream to print the data to.

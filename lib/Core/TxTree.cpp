@@ -15,7 +15,9 @@
 
 #include "TxTree.h"
 
+#include "AddressSpace.h"
 #include "Dependency.h"
+#include "Memory.h"
 #include "ShadowArray.h"
 #include "TimingSolver.h"
 
@@ -2111,6 +2113,36 @@ void TxTree::markPathCondition(ExecutionState &state, TimingSolver *solver,
 
   // We create path condition marking structure and mark core constraints
   currentTxTreeNode->unsatCoreInterpolation(unsatCore);
+}
+
+ref<Expr> TxTree::dumpMemoryConstraint(ExecutionState &state) {
+  ref<Expr> data;
+#ifdef ENABLE_Z3
+  for (MemoryMap::iterator it = state.addressSpace.objects.begin(),
+                           ie = state.addressSpace.objects.end();
+       it != ie; ++it) {
+    ref<Expr> addressExpr = it->first->getBaseExpr();
+    ref<Expr> sizeExpr = it->first->getSizeExpr();
+    if (ConstantExpr *se = llvm::dyn_cast<ConstantExpr>(sizeExpr)) {
+      uint64_t size = se->getZExtValue();
+      for (uint64_t i = 0; i < size; ++i) {
+        ref<Expr> byte = (*(it->second)).read8(i);
+        ref<Expr> readExpr =
+            (*(it->second)).read8Public(Expr::createPointer(i));
+        ref<Expr> equality = EqExpr::create(readExpr, byte);
+        if (data.isNull()) {
+          data = equality;
+        } else {
+          data = AndExpr::create(equality, data);
+        }
+      }
+    }
+  }
+#endif
+  if (data.isNull()) {
+    return ConstantExpr::create(1, Expr::Bool);
+  }
+  return data;
 }
 
 void TxTree::executePHI(llvm::Instruction *instr, unsigned incomingBlock,

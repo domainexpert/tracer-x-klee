@@ -430,9 +430,25 @@ ref<Expr> ObjectState::read8(ref<Expr> offset) const {
                       size,
                       allocInfo.c_str());
   }
-  
   return ReadExpr::create(getUpdates(), ZExtExpr::create(offset, Expr::Int32));
 }
+
+#ifdef ENABLE_Z3
+ref<Expr> ObjectState::read8Public(ref<Expr> offset) const {
+  unsigned base, size;
+  fastRangeCheckOffset(offset, &base, &size);
+  flushRangeForRead(base, size);
+
+  if (size > 4096) {
+    std::string allocInfo;
+    object->getAllocInfo(allocInfo);
+    klee_warning_once(0,
+                      "flushing %d bytes on read, may be slow and/or crash: %s",
+                      size, allocInfo.c_str());
+  }
+  return ReadExpr::create(getUpdates(), ZExtExpr::create(offset, Expr::Int32));
+}
+#endif
 
 void ObjectState::write8(unsigned offset, uint8_t value) {
   //assert(read_only == false && "writing to read-only object!");

@@ -208,6 +208,9 @@ public:
   void write32(unsigned offset, uint32_t value);
   void write64(unsigned offset, uint64_t value);
 
+#ifdef ENABLE_Z3
+  ref<Expr> read8Public(ref<Expr> offset) const;
+#endif
 private:
   const UpdateList &getUpdates() const;
 

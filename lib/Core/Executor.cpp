@@ -3089,7 +3089,7 @@ void Executor::run(ExecutionState &initialState) {
 	KInstruction *ki = state.pc;
 	stepInstruction(state);
 
-	executeInstruction(state, ki);
+        executeInstruction(state, ki);
         if (INTERPOLATION_ENABLED) {
           state.txTreeNode->incInstructionsDepth();
         }
