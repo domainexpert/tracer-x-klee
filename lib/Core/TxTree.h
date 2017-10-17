@@ -883,7 +883,8 @@ public:
   /// solver, etc.
   static ref<Expr> dumpMemoryConstraint(ExecutionState &state);
 
-  void printBoundInterpolant(ref<Expr> condition) const;
+  void buildLoadCheckQuery(ArrayCache &arrayCache,
+                           ref<Expr> condition) const;
 
   /// \brief Print the content of the tree node object into a stream.
   ///

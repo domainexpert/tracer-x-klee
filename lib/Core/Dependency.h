@@ -507,7 +507,12 @@ namespace klee {
     void memoryBoundViolationInterpolation(llvm::Instruction *inst,
                                            ref<Expr> address);
 
-    void printBoundInterpolant(ref<Expr> condition) const;
+    void buildLoadCheckQuery(ArrayCache &arrayCache,
+                             ref<Expr> condition) const;
+
+    ref<Expr> symbolicizeAddresses(
+        ArrayCache &arrayCache, ref<Expr> term,
+        std::map<ref<Expr>, ref<Expr> > &addressToSymbolicRead) const;
 
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {

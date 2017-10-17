@@ -2184,8 +2184,9 @@ void TxTree::printNode(llvm::raw_ostream &stream, TxTreeNode *n,
   }
 }
 
-void TxTree::printBoundInterpolant(ref<Expr> condition) const {
-  currentTxTreeNode->dependency->printBoundInterpolant(condition);
+void TxTree::buildLoadCheckQuery(ArrayCache &arrayCache,
+                                 ref<Expr> condition) const {
+  currentTxTreeNode->dependency->buildLoadCheckQuery(arrayCache, condition);
 }
 
 void TxTree::print(llvm::raw_ostream &stream) const {

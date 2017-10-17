@@ -908,6 +908,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       // Validity proof succeeded of a query: antecedent -> consequent.
       // We then extract the unsatisfiability core of antecedent and not
       // consequent as the Craig interpolant.
+      llvm::errs() << "FOUND TRUE\n";
+      Query(current.constraints, condition).dump();
+      txTree->buildLoadCheckQuery(arrayCache, condition);
       txTree->markPathCondition(current, solver, unsatCore);
     }
 
@@ -923,6 +926,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       // Falsity proof succeeded of a query: antecedent -> consequent,
       // which means that antecedent -> not(consequent) is valid. In this
       // case also we extract the unsat core of the proof
+      llvm::errs() << "FOUND FALSE\n";
+      Query(current.constraints, condition).dump();
+      txTree->buildLoadCheckQuery(arrayCache, condition);
       txTree->markPathCondition(current, solver, unsatCore);
     }
 

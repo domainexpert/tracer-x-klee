@@ -20,6 +20,7 @@
 
 #include "klee/CommandLine.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/util/ArrayCache.h"
 #include "klee/util/GetElementPtrTypeIterator.h"
 #include "klee/util/TxPrintUtil.h"
 
@@ -1654,8 +1655,60 @@ ref<TxStateValue> Dependency::evalConstantExpr(
   }
 }
 
-void Dependency::printBoundInterpolant(ref<Expr> condition) const {
-  llvm::errs() << "print\n";
+void Dependency::buildLoadCheckQuery(ArrayCache &arrayCache,
+                                     ref<Expr> condition) const {
+  std::map<ref<Expr>, ref<Expr> > addressToSymbolicRead;
+  std::vector<ref<Expr> > newConstraints;
+  condition = EqExpr::create(ConstantExpr::create(0, Expr::Bool), condition);
+  ref<Expr> result =
+      symbolicizeAddresses(arrayCache, condition, addressToSymbolicRead);
+}
+
+ref<Expr> Dependency::symbolicizeAddresses(
+    ArrayCache &arrayCache, ref<Expr> term,
+    std::map<ref<Expr>, ref<Expr> > &addressToSymbolicRead) const {
+  static unsigned freshArrayIndex = 0;
+
+  std::set<ref<TxStateAddress> > result;
+  if (llvm::isa<ConcatExpr>(term) || llvm::isa<ReadExpr>(term)) {
+    store->find(term, result);
+    // The pointer in result may be slackened
+    for (std::set<ref<TxStateAddress> >::const_iterator it = result.begin(),
+                                                        ie = result.end();
+         it != ie; ++it) {
+      std::map<ref<Expr>, ref<Expr> >::const_iterator it1 =
+          addressToSymbolicRead.find((*it)->getAddress());
+      if (it1 != addressToSymbolicRead.end()) {
+        return it1->second;
+      }
+      freshArrayIndex++;
+      std::string arrayName;
+      llvm::raw_string_ostream stream(arrayName);
+      stream << "__tmp__" << freshArrayIndex;
+      stream.flush();
+      ref<Expr> symbolicRead = Expr::createTempRead(
+          arrayCache.CreateArray(arrayName, (*it)->getSize()),
+          term->getWidth());
+      addressToSymbolicRead[(*it)->getAddress()] = symbolicRead;
+      return symbolicRead;
+    }
+  }
+
+  ref<Expr> ret = term;
+  if (unsigned kids = ret->getNumKids()) {
+    ref<Expr> *newKids;
+    newKids = new ref<Expr>[kids];
+    for (unsigned i = 0; i < kids; ++i) {
+      newKids[i] = symbolicizeAddresses(arrayCache, term->getKid(i),
+                                        addressToSymbolicRead);
+    }
+    ret = term->rebuild(newKids);
+
+    // FIXME: This causes memory corruption, but would memory leak otherwise?
+
+    // delete newKids;
+  }
+  return ret;
 }
 
 /// \brief Print the content of the object to the LLVM error stream
