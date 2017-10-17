@@ -125,6 +125,20 @@ ref<TxStoreEntry> TxStore::find(ref<TxStateAddress> loc) const {
   return nullEntry;
 }
 
+void TxStore::find(ref<Expr> expr,
+                   std::set<ref<TxStateAddress> > &result) const {
+  for (TopStateStore::const_iterator it = internalStore.begin(),
+                                     ie = internalStore.end();
+       it != ie; ++it) {
+    for (LowerStateStore::const_iterator it1 = it->second.concreteBegin(),
+                                         ie1 = it->second.concreteEnd();
+         it1 != ie1; ++it1) {
+      if (it1->second->getContent()->getExpression() == expr)
+        result.insert(it1->second->getAddress());
+    }
+  }
+}
+
 void TxStore::getStoredExpressions(
     const std::vector<llvm::Instruction *> &callHistory,
     std::set<const Array *> &replacements, bool coreOnly, bool leftRetrieval,
