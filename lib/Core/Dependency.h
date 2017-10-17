@@ -507,6 +507,8 @@ namespace klee {
     void memoryBoundViolationInterpolation(llvm::Instruction *inst,
                                            ref<Expr> address);
 
+    void printBoundInterpolant(ref<Expr> condition) const;
+
     /// \brief Print the content of the object to the LLVM error stream
     void dump() const {
       this->print(llvm::errs());

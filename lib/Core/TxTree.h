@@ -883,6 +883,8 @@ public:
   /// solver, etc.
   static ref<Expr> dumpMemoryConstraint(ExecutionState &state);
 
+  void printBoundInterpolant(ref<Expr> condition) const;
+
   /// \brief Print the content of the tree node object into a stream.
   ///
   /// \param stream The stream to print the data to.

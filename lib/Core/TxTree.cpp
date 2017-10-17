@@ -2184,6 +2184,10 @@ void TxTree::printNode(llvm::raw_ostream &stream, TxTreeNode *n,
   }
 }
 
+void TxTree::printBoundInterpolant(ref<Expr> condition) const {
+  currentTxTreeNode->dependency->printBoundInterpolant(condition);
+}
+
 void TxTree::print(llvm::raw_ostream &stream) const {
   stream << "------------------------- TxTree Structure "
             "--------------------------\n";

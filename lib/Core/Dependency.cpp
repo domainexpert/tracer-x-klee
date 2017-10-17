@@ -1654,6 +1654,10 @@ ref<TxStateValue> Dependency::evalConstantExpr(
   }
 }
 
+void Dependency::printBoundInterpolant(ref<Expr> condition) const {
+  llvm::errs() << "print\n";
+}
+
 /// \brief Print the content of the object to the LLVM error stream
 void Dependency::print(llvm::raw_ostream &stream) const {
   this->print(stream, 0);
