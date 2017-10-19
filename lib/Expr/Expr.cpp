@@ -197,6 +197,10 @@ unsigned ExistsExpr::computeHash() {
   return res;
 }
 
+unsigned DerefExpr::computeHash() {
+  return address->hash() * Expr::MAGIC_HASH_CONSTANT;
+}
+
 unsigned CastExpr::computeHash() {
   unsigned res = getWidth() * Expr::MAGIC_HASH_CONSTANT;
   hashValue = res ^ src->hash() * Expr::MAGIC_HASH_CONSTANT;
@@ -490,6 +494,10 @@ ref<Expr> ExistsExpr::create(std::set<const Array *> variables,
                              ref<Expr> body) {
   return alloc(variables, body);
 }
+
+/***/
+
+ref<Expr> DerefExpr::create(ref<Expr> address) { return alloc(address); }
 
 /***/
 

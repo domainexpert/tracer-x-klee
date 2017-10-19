@@ -160,7 +160,8 @@ public:
     Sgt, ///< Not used in canonical form
     Sge, ///< Not used in canonical form
     Exists,
-    LastKind = Exists,
+    Deref,
+    LastKind = Deref,
     CastKindFirst = ZExt,
     CastKindLast = SExt,
     BinaryKindFirst = Add,
@@ -411,6 +412,44 @@ public:
 private:
   ExistsExpr(std::set<const Array *> variables, ref<Expr> body)
       : variables(variables), body(body) {}
+};
+
+class DerefExpr : public NonConstantExpr {
+public:
+  ref<Expr> address;
+
+public:
+  unsigned getNumKids() const { return 1; }
+
+  ref<Expr> getKid(unsigned i) const {
+    if (i == 0)
+      return address;
+    return 0;
+  }
+
+protected:
+  DerefExpr(const ref<Expr> &_address) : address(_address) {}
+
+public:
+  static ref<Expr> alloc(ref<Expr> address) {
+    ref<Expr> r(new DerefExpr(address));
+    r->computeHash();
+    return r;
+  }
+
+  static ref<Expr> create(ref<Expr> address);
+
+  Width getWidth() const { return Int8; }
+
+  Kind getKind() const { return Deref; }
+
+  ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0]); }
+
+  unsigned computeHash();
+
+  static bool classof(const Expr *E) { return E->getKind() == Expr::Deref; }
+
+  static bool classof(const DerefExpr *) { return true; }
 };
 
 // Special
