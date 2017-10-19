@@ -309,6 +309,13 @@ private:
     print(xe->getKid(0), PC);
   }
 
+  void printDeref(const DerefExpr *de, PrintContext &PC, unsigned indent) {
+    PC << "*(";
+    print(de->getKid(0), PC);
+    PC << ")";
+    printSeparator(PC, false, indent);
+  }
+
   void printExpr(const Expr *ep, PrintContext &PC, unsigned indent, bool printConstWidth=false) {
     bool simple = hasSimpleKids(ep);
     
@@ -430,6 +437,8 @@ public:
           printExpr(e.get(), PC, indent, true);
         } else if (const ExistsExpr *xe = dyn_cast<ExistsExpr>(e)) {
           printExists(xe, PC, indent);
+        } else if (const DerefExpr *de = dyn_cast<DerefExpr>(e)) {
+          printDeref(de, PC, indent);
         } else
           printExpr(e.get(), PC, indent);	
         PC << ")";

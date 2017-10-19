@@ -321,6 +321,7 @@ protected:
                                ExprSMTLIBPrinter::SMTLIB_SORT s);
   void printAShrExpr(const ref<AShrExpr> &e);
   void printExistsExpr(const ref<ExistsExpr> &e);
+  void printDerefExpr(const ref<DerefExpr> &e);
 
   // For the set of operators that take sort "s" arguments
   void printSortArgsExpr(const ref<Expr> &e,

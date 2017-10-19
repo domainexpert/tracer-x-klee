@@ -87,6 +87,9 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::Sgt: res = visitSgt(static_cast<SgtExpr&>(ep)); break;
     case Expr::Sge: res = visitSge(static_cast<SgeExpr&>(ep)); break;
     case Expr::Exists: res = visitExists(static_cast<ExistsExpr&>(ep)); break;
+    case Expr::Deref:
+      res = visitDeref(static_cast<DerefExpr &>(ep));
+      break;
     case Expr::Constant:
     default:
       assert(0 && "invalid expression kind");
@@ -258,5 +261,9 @@ ExprVisitor::Action ExprVisitor::visitSge(const SgeExpr&) {
 }
 
 ExprVisitor::Action ExprVisitor::visitExists(const ExistsExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitDeref(const DerefExpr &) {
   return Action::doChildren();
 }

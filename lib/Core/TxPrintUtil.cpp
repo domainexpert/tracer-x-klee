@@ -517,6 +517,11 @@ std::string PrettyExpressionBuilder::constructActual(ref<Expr> e) {
     return "(exists (" + existentials + ") " + constructActual(xe->body) + ")";
   }
 
+  case Expr::Deref: {
+    DerefExpr *de = cast<DerefExpr>(e);
+    return "*(" + constructActual(de->address) + ")";
+  }
+
   default:
     assert(0 && "unhandled Expr type");
     return getTrue();

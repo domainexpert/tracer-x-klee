@@ -265,6 +265,10 @@ void ExprSMTLIBPrinter::printFullExpression(
     printExistsExpr(cast<ExistsExpr>(e));
     return;
 
+  case Expr::Deref:
+    printDerefExpr(cast<DerefExpr>(e));
+    return;
+
   default:
     /* The remaining operators (Add,Sub...,Ult,Ule,..)
      * Expect SORT_BITVECTOR arguments
@@ -434,6 +438,11 @@ void ExprSMTLIBPrinter::printExistsExpr(const ref<ExistsExpr> &e) {
   printExpression(e->getKid(0), SORT_BOOL);
   p->popIndent();
   *p << ")";
+}
+
+void ExprSMTLIBPrinter::printDerefExpr(const ref<DerefExpr> &e) {
+  // FIXME: This should properly be a select using an array
+  *p << "(0)";
 }
 
 const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
