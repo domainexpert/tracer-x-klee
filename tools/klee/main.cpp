@@ -553,11 +553,112 @@ void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorSuffix) {
   if (errorMessage && ExitOnError) {
     llvm::errs() << "EXITING ON ERROR:\n" << errorMessage << "\n";
+
     if (INTERPOLATION_ENABLED) {
       TxTreeGraph::setError(state, TxTreeGraph::GENERIC);
       TxTreeGraph::save(getOutputFilename("tree.dot"));
       TxTreeGraph::deallocate();
     }
+
+    uint64_t instructions =
+        *theStatisticManager->getStatisticByName("Instructions");
+
+    std::stringstream stats;
+    if (INTERPOLATION_ENABLED) {
+      stats << getSubsumptionStats();
+    }
+
+    stats << "\n";
+    stats << "KLEE: done: total instructions = " << instructions << "\n";
+    stats << "KLEE: done: completed paths = " << getNumPathsExplored()
+          << ", among which\n";
+    stats << "KLEE: done:     early-terminating paths (instruction time limit, "
+             "solver timeout, max-depth reached) = " << getEarlyTermination()
+          << "\n";
+
+    if (INTERPOLATION_ENABLED) {
+      stats << "KLEE: done:     average branching depth of completed paths = "
+            << (double)(getTotalBranchingDepthOnExitTermination() +
+                        getTotalBranchingDepthOnEarlyTermination() +
+                        getTotalBranchingDepthOnErrorTermination()) /
+                   (double)(getExitTermination() + getEarlyTermination() +
+                            getErrorTermination()) << "\n";
+      if (getSubsumptionTermination() == 0.0) {
+        stats << "KLEE: done:     average branching depth of subsumed paths = "
+              << 0 << "\n";
+      } else {
+        stats << "KLEE: done:     average branching depth of subsumed paths = "
+              << (double)getTotalBranchingDepthOnSubsumption() /
+                     (double)getSubsumptionTermination() << "\n";
+      }
+    }
+
+    if (INTERPOLATION_ENABLED) {
+      stats << "KLEE: done:     average instructions of completed paths = "
+            << (double)(getTotalInstructionsDepthOnExitTermination() +
+                        getTotalInstructionsDepthOnEarlyTermination() +
+                        getTotalInstructionsDepthOnErrorTermination()) /
+                   (double)(getExitTermination() + getEarlyTermination() +
+                            getErrorTermination()) << "\n";
+      if (getSubsumptionTermination() == 0.0) {
+        stats << "KLEE: done:     average instructions of subsumed paths = "
+              << 0 << "\n";
+      } else {
+        stats << "KLEE: done:     average instructions of subsumed paths = "
+              << (double)getTotalInstructionPathsExploredOnSubsumption() /
+                     (double)getSubsumptionTermination() << "\n";
+      }
+    }
+
+    if (INTERPOLATION_ENABLED)
+      stats << "KLEE: done:     subsumed paths = "
+            << getSubsumptionTermination() << "\n";
+    stats << "KLEE: done:     error paths = " << getErrorTermination() << "\n";
+    stats << "KLEE: done:     program exit paths = " << getExitTermination()
+          << "\n";
+    stats << "KLEE: done: generated tests = " << getNumTestCases()
+          << ", among which\n";
+    stats << "KLEE: done:     early-terminating tests (instruction time limit, "
+             "solver timeout, max-depth reached) = "
+          << getEarlyTerminationTest() << "\n";
+#ifdef ENABLE_Z3
+    if (SubsumedTest)
+      stats << "KLEE: done:     subsumed tests = "
+            << getSubsumptionTerminationTest() << "\n";
+#endif
+    stats << "KLEE: done:     error tests = " << getErrorTerminationTest()
+          << "\n";
+    stats << "KLEE: done:     program exit tests = " << getExitTerminationTest()
+          << "\n";
+
+    if (INTERPOLATION_ENABLED) {
+      stats << "\n";
+      stats << "KLEE: done: NOTE:\n";
+      stats << "KLEE: done:     Subsumed paths / tests counts are "
+               "nondeterministic for\n";
+      stats
+          << "KLEE: done:     programs with dynamically-allocated memory such "
+             "as those\n";
+      stats << "KLEE: done:     using malloc, since KLEE may reuse the address "
+               "of the\n";
+      stats << "KLEE: done:     same malloc calls in different paths. This "
+               "nondeterminism\n";
+      stats << "KLEE: done:     does not cause loss of error reports.\n";
+    }
+
+    bool useColors = llvm::errs().is_displayed();
+    if (useColors)
+      llvm::errs().changeColor(llvm::raw_ostream::GREEN,
+                               /*bold=*/true,
+                               /*bg=*/false);
+
+    llvm::errs() << stats.str();
+
+    if (useColors)
+      llvm::errs().resetColor();
+
+    getInfoStream() << stats.str();
+
     exit(1);
   }
 
